@@ -15,7 +15,7 @@
 
 .. class:: center
 
-    :Название исследуемой задачи: LLM Embedding's Low-Dimensionsl SubSpaces
+    :Название исследуемой задачи: LLM Embedding's Low-Dimensional SubSpaces
     :Тип научной работы: CoIS
     :Автор: Иван Папай, Владислав Минашкин, Фёдор Соболевский, Владислав Мешков
     :Научный руководитель: Андрей Грабовой
