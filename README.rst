@@ -15,7 +15,7 @@
 
 .. class:: center
 
-    :Название исследуемой задачи: Testing the Manifold Hypothesis in the Embedding Space of Large Language Models
+    :Название исследуемой задачи: Testing the Manifold Hypothesis in the Embedding SubSpaces of Large Language Models
     :Тип научной работы: CoIS
     :Автор: Иван Папай, Владислав Минашкин, Фёдор Соболевский, Владислав Мешков
     :Научный руководитель: Андрей Грабовой
