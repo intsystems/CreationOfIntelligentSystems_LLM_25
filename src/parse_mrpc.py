@@ -10,13 +10,13 @@ from tqdm import tqdm
 token = '...'
 
 # Configuration
-#MODEL_NAME = "openlm-research/open_llama_3b"
+MODEL_NAME = "openlm-research/open_llama_3b"
 #MODEL_NAME = "Qwen/Qwen2.5-3B"
 #MODEL_NAME = 'MultiTrickFox/bloom-2b5_Zen'
 #MODEL_NAME = "bigscience/bloom-7b1"
 #MODEL_NAME = "bigscience/bloom-560m"
 
-MODEL_NAME = "bigscience/bloom-1b1"
+# MODEL_NAME = "bigscience/bloom-1b1"
 
 #OUTPUT_DIR = "activations_mrpc_openlllama3b"
 #OUTPUT_DIR = "activations_mrpc_qwen2.5-3B"
