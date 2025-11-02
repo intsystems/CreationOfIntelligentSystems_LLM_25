@@ -1,0 +1,34 @@
+# Model configuration
+model:
+  name: "bigscience/bloom-1b1"
+  
+  torch_dtype: "bfloat16"  # bfloat16, float16, float32
+  device_map: "auto"
+  cache_dir: "/home/jovyan/shares/SR008.fs2/nkiselev/sandbox/vmeshkov/dim_lm/CreationOfIntelligentSystems_LLM_25/cache"
+  token: null  # HuggingFace token if needed
+  use_bloom: true  # true for BLOOM models, false for LLaMA/Qwen
+
+# Dataset configuration
+dataset:
+  name: "glue"
+  subset: "mrpc"
+  split: "train"
+  cache_dir: "/home/jovyan/shares/SR008.fs2/nkiselev/sandbox/vmeshkov/dim_lm/CreationOfIntelligentSystems_LLM_25/data"
+  max_length: 512
+  
+# Processing configuration
+processing:
+  batch_size: 96
+  num_workers: 4
+  shuffle: false
+
+# Output configuration
+output:
+  base_dir: "activation_saved/activations_mrpc"
+  model_subdir: "bloom-1b1"  # Subdirectory name for this model
+  save_dtype: "float16"  # float16, float32
+  
+# Activation aggregation
+aggregation:
+  method: "mean"  # mean, sum, last, none
+  use_attention_mask: true
