@@ -120,3 +120,8 @@ logs/
 */mnist
 *.csv
 !.dvc
+
+data
+configs
+activation_saved
+cache
