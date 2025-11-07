@@ -1,4 +1,5 @@
 """Main processing logic for activation extraction."""
+import time
 import os
 import torch
 import numpy as np
@@ -8,7 +9,7 @@ from tqdm import tqdm
 from omegaconf import DictConfig
 import logging
 
-from dataset import MRPCDataset, load_glue_dataset, SSTDataset, QQPDataset
+from dataset import MRPCDataset, download_dataset, SSTDataset, QQPDataset, Enwik8LlamaDataset
 from model import load_model_and_tokenizer, get_model_info, get_model_layers
 from hooks import ActivationHookManager
 from utils import create_output_structure, aggregate_activations, get_storage_stats
@@ -45,14 +46,15 @@ class ActivationProcessor:
         print(f"Hidden dimension: {model_info['hidden_dim']}")
         
         # Load dataset
-        dataset = load_glue_dataset(self.config)
+        dataset = download_dataset(self.config)
         print(f"Dataset samples: {len(dataset)}")
         
         # Create dataset and dataloader
         dataset_class_mapping = {
             'mrpc':MRPCDataset,
             'sst2':SSTDataset,
-            'qqp':QQPDataset
+            'qqp':QQPDataset,
+            'enwik8': Enwik8LlamaDataset
         }
         dataset = dataset_class_mapping[self.config.dataset.subset](
             dataset,
