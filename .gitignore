@@ -111,7 +111,7 @@ __pycache__/
 .gitignore
 # Exclude folders with name logs:
 logs/
- 
+
 # Exclude all .dat files:
 *.dat
 # Exclude all files which begin on .
@@ -125,3 +125,4 @@ data
 configs
 activation_saved
 cache
+all_stats
