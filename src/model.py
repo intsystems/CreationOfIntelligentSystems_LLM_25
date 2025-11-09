@@ -1,6 +1,6 @@
 """Model loading utilities."""
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, BertLMHeadModel, OPTForCausalLM
 from omegaconf import DictConfig
 import logging
 
@@ -66,6 +66,10 @@ def get_model_layers(model, use_bloom: bool):
     """
     if use_bloom:
         modules = [model.transformer.word_embeddings_layernorm] + list(model.transformer.h)
+    elif isinstance(model, BertLMHeadModel):
+        modules = [model.bert.embeddings.word_embeddings] + list(model.bert.encoder.layer)
+    elif isinstance(model, OPTForCausalLM):
+        modules = [model.model.decoder.embed_tokens] + list(model.model.decoder.layers)
     else:
         modules = [model.model.embed_tokens] + list(model.model.layers)
     
