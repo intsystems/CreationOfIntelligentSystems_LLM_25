@@ -1,4 +1,7 @@
 """Dataset loading and processing."""
+import os
+import urllib
+import zipfile
 import torch
 from torch.utils.data import Dataset
 from datasets import load_dataset
@@ -119,11 +122,152 @@ class QQPDataset(Dataset):
             'target':sample['label']
         }
 
+class WritingPromptsDataset(Dataset):
+    def __init__(self, data, tokenizer, max_length=512):
+        """
+        Args:
+            data: List of prompts or huggingface Dataset object
+            tokenizer: Transformer tokenizer (e.g., AutoTokenizer)
+            max_length: Maximum sequence length for tokenization
+        """
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        
+        # Handle both list and huggingface Dataset
+        if hasattr(data, '__getitem__') and hasattr(data, '__len__'):
+            self.data = data
+        else:
+            self.data = data
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        item = self.data[idx]
+        
+        if isinstance(item, dict):
+            text = item.get("story", "")
+        else:
+            text = str(item)
+        encodings = self.tokenizer(
+            text,
+            max_length=self.max_length,
+            truncation=True,
+            padding="max_length",
+            return_tensors="pt"
+        )
+        
+        # Return as tensors (squeeze to remove batch dimension)
+        return {
+            "input_ids": encodings["input_ids"].squeeze(0),
+            "attention_mask": encodings["attention_mask"].squeeze(0),
+            'idx':idx
+        }
 
+class Enwik8LlamaDataset(Dataset):
+    """Custom Dataset for enwik8 with proper tokenization"""
+    
+    def __init__(self, data, tokenizer, max_length=512, stride=256):
+        """
+        Args:
+            data: raw text string
+            tokenizer: HuggingFace tokenizer (e.g., LlamaTokenizer)
+            max_length: maximum sequence length for the model
+            stride: stride for sliding window (if None, no overlap)
+        """
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        self.stride = stride if stride else max_length
+        
+        self.data = data
+        
+        self.encodings = tokenizer(
+            self.data,
+            add_special_tokens=False,
+            return_attention_mask=False,
+            return_tensors=None
+        )
+        self.input_ids = self.encodings['input_ids']
+        
+        # Calculate number of samples based on sliding window
+        self.num_samples = max(1, (len(self.input_ids) - max_length) // self.stride + 1)
+    
+    def __len__(self):
+        return self.num_samples
+    
+    def __getitem__(self, idx):
+        # Calculate start position with stride
+        start_idx = idx * self.stride
+        end_idx = start_idx + self.max_length
+        
+        # Handle the last sample
+        if end_idx > len(self.input_ids):
+            start_idx = len(self.input_ids) - self.max_length
+            end_idx = len(self.input_ids)
+        
+        # Get input sequence
+        input_ids = self.input_ids[start_idx:end_idx]
+        
+        # Create attention mask (all 1s since we have real tokens)
+        attention_mask = [1] * len(input_ids)
+        
+        # Pad if necessary
+        if len(input_ids) < self.max_length:
+            padding_length = self.max_length - len(input_ids)
+            input_ids = input_ids + [self.tokenizer.pad_token_id] * padding_length
+            attention_mask = attention_mask + [0] * padding_length
+        
+        return {
+            'input_ids': torch.tensor(input_ids, dtype=torch.long),
+            'attention_mask': torch.tensor(attention_mask, dtype=torch.long),
+            'idx':idx
+        }
 
-def load_glue_dataset(config: DictConfig):
+def preprocess_enwik8(raw_path, clean=True):
+    """Read and optionally clean enwik8 data"""
+    with open(raw_path, 'rb') as f:
+        data = f.read()
+    
+    # Convert to string
+    data = data.decode('utf-8', errors='ignore')
+    
+    if clean:
+        # Remove XML/HTML tags (basic cleaning)
+        import re
+        # Remove XML tags
+        data = re.sub(r'<[^>]+>', '', data)
+        # Remove extra whitespace
+        data = re.sub(r'\s+', ' ', data)
+    
+    return data
+
+def download_enwik8(config):
+    """Download enwik8 dataset from Matt Mahoney's site"""
+
+    data_dir = os.path.join(config.dataset.cache_dir)
+
+    os.makedirs(data_dir, exist_ok=True)
+    
+    url = 'http://mattmahoney.net/dc/enwik8.zip'
+    zip_path = os.path.join(data_dir, 'enwik8.zip')
+    raw_path = os.path.join(data_dir, 'enwik8')
+    
+    # Download if not exists
+    if not os.path.exists(raw_path):
+        print(f'Downloading enwik8 from {url}...')
+        urllib.request.urlretrieve(url, zip_path)
+        
+        print('Extracting...')
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(data_dir)
+        
+        os.remove(zip_path)
+        print('Download complete!')
+    return preprocess_enwik8(raw_path)
+
+def download_dataset(config: DictConfig):
     """
-    Load GLUE dataset.
+    Load dataset.
     
     Args:
         config: Hydra configuration
@@ -131,13 +275,22 @@ def load_glue_dataset(config: DictConfig):
     Returns:
         Dataset split
     """
-    print(f"Loading {config.dataset.name}/{config.dataset.subset} dataset...")
+    #print(f"Loading {config.dataset.name}/{config.dataset.subset} dataset...")
     
-    dataset = load_dataset(
-        config.dataset.name,
-        config.dataset.subset,
-        cache_dir=config.dataset.cache_dir
-    )
+    if config.dataset.name == 'other' and config.dataset.subset == 'enwik8':
+        return download_enwik8(config)
+    
+    if 'subset' in config.dataset:
+        dataset = load_dataset(
+            config.dataset.name,
+            config.dataset.subset,
+            cache_dir=config.dataset.cache_dir
+        )
+    else:
+        dataset = load_dataset(
+            config.dataset.name,
+            cache_dir=config.dataset.cache_dir
+        )
     
     split_data = dataset[config.dataset.split]
     print(f"Loaded {len(split_data)} samples from {config.dataset.split} split")

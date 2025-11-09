@@ -1,14 +1,15 @@
 """Main processing logic for activation extraction."""
+import time
 import os
 import torch
 import numpy as np
 from torch.utils.data import DataLoader
 from pathlib import Path
 from tqdm import tqdm
-from omegaconf import DictConfig
+from omegaconf import DictConfig, ListConfig
 import logging
 
-from dataset import MRPCDataset, load_glue_dataset, SSTDataset, QQPDataset
+from dataset import MRPCDataset, download_dataset, SSTDataset, QQPDataset, Enwik8LlamaDataset, WritingPromptsDataset
 from model import load_model_and_tokenizer, get_model_info, get_model_layers
 from hooks import ActivationHookManager
 from utils import create_output_structure, aggregate_activations, get_storage_stats
@@ -45,16 +46,19 @@ class ActivationProcessor:
         print(f"Hidden dimension: {model_info['hidden_dim']}")
         
         # Load dataset
-        dataset = load_glue_dataset(self.config)
+        dataset = download_dataset(self.config)
         print(f"Dataset samples: {len(dataset)}")
         
         # Create dataset and dataloader
         dataset_class_mapping = {
             'mrpc':MRPCDataset,
             'sst2':SSTDataset,
-            'qqp':QQPDataset
+            'qqp':QQPDataset,
+            'enwik8': Enwik8LlamaDataset,
+            'euclaise/writingprompts': WritingPromptsDataset
         }
-        dataset = dataset_class_mapping[self.config.dataset.subset](
+        key = self.config.dataset['subset'] if 'subset' in self.config.dataset else self.config.dataset.name
+        dataset = dataset_class_mapping[key](
             dataset,
             self.tokenizer,
             self.config.dataset.max_length
@@ -108,17 +112,24 @@ class ActivationProcessor:
                 layer_activations_np = layer_activations.numpy()
                 
                 # Aggregate activations
-                aggregated = aggregate_activations(
-                    layer_activations_np,
-                    batch['attention_mask'].cpu().numpy(),
-                    self.config.aggregation.method,
-                    self.config.aggregation.use_attention_mask
-                )
+                methods = [self.config.aggregation.method]
+                if isinstance(self.config.aggregation.method, ListConfig):
+                    methods = self.config.aggregation.method
+                for method in methods:
+                    aggregated = aggregate_activations(
+                        layer_activations_np,
+                        batch['attention_mask'].cpu().numpy(),
+                        method,
+                        self.config.aggregation.use_attention_mask
+                    )
                 
-                # Save to file
-                layer_dir = Path(self.output_dir) / f"layer_{layer_idx:02d}"
-                filename = layer_dir / f"batch_{batch_idx:04d}.npy"
-                np.save(filename, aggregated)
+                    # Save to file
+                    layer_dir = Path(self.output_dir) /f'agg_{method}'/ f"layer_{layer_idx:02d}"
+                    Path(layer_dir).mkdir(parents=True, exist_ok=True)
+                    filename = layer_dir / f"batch_{batch_idx:04d}.npy"
+                    np.save(filename, aggregated)
+                    if 'target' in batch:
+                        targets_dir = Path(self.output_dir) / 'targets'
             
             batch_idx += 1
         
