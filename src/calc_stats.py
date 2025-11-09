@@ -74,6 +74,7 @@ def parse_twonn_dimention(X):
 @add_layer_parsing_and_averaging
 def parse_singular_dimention(X,
                              variance_threshold=0.90):
+    X = X.astype(np.float64)
     _, S, _ = np.linalg.svd(X, full_matrices=False)
     variance = S ** 2
     total_variance = np.sum(variance)
@@ -130,13 +131,6 @@ def calculate_and_save_stats(
                                   num_samples = num_samples,
                                   num_estimates = num_estimates,
                                   variance_threshold=0.99)
-            )
-        stats['singular_dim_0.999'].append(
-            parse_singular_dimention(layer_num = i,
-                                  path_to_activations = path_to_activations,
-                                  num_samples = num_samples,
-                                  num_estimates = num_estimates,
-                                  variance_threshold=0.999)
             )
     with open(path_to_save, 'w') as f:
         yaml.dump(dict(stats), f)

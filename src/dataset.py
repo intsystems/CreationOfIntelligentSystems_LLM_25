@@ -8,7 +8,6 @@ from datasets import load_dataset
 from transformers import PreTrainedTokenizer
 from omegaconf import DictConfig
 
-
 class MRPCDataset(Dataset):
     """Custom Dataset class for MRPC."""
     
@@ -123,6 +122,48 @@ class QQPDataset(Dataset):
             'target':sample['label']
         }
 
+class WritingPromptsDataset(Dataset):
+    def __init__(self, data, tokenizer, max_length=512):
+        """
+        Args:
+            data: List of prompts or huggingface Dataset object
+            tokenizer: Transformer tokenizer (e.g., AutoTokenizer)
+            max_length: Maximum sequence length for tokenization
+        """
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        
+        # Handle both list and huggingface Dataset
+        if hasattr(data, '__getitem__') and hasattr(data, '__len__'):
+            self.data = data
+        else:
+            self.data = data
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        item = self.data[idx]
+        
+        if isinstance(item, dict):
+            text = item.get("story", "")
+        else:
+            text = str(item)
+        encodings = self.tokenizer(
+            text,
+            max_length=self.max_length,
+            truncation=True,
+            padding="max_length",
+            return_tensors="pt"
+        )
+        
+        # Return as tensors (squeeze to remove batch dimension)
+        return {
+            "input_ids": encodings["input_ids"].squeeze(0),
+            "attention_mask": encodings["attention_mask"].squeeze(0),
+            'idx':idx
+        }
+
 class Enwik8LlamaDataset(Dataset):
     """Custom Dataset for enwik8 with proper tokenization"""
     
@@ -234,15 +275,22 @@ def download_dataset(config: DictConfig):
     Returns:
         Dataset split
     """
-    print(f"Loading {config.dataset.name}/{config.dataset.subset} dataset...")
+    #print(f"Loading {config.dataset.name}/{config.dataset.subset} dataset...")
     
     if config.dataset.name == 'other' and config.dataset.subset == 'enwik8':
         return download_enwik8(config)
-    dataset = load_dataset(
-        config.dataset.name,
-        config.dataset.subset,
-        cache_dir=config.dataset.cache_dir
-    )
+    
+    if 'subset' in config.dataset:
+        dataset = load_dataset(
+            config.dataset.name,
+            config.dataset.subset,
+            cache_dir=config.dataset.cache_dir
+        )
+    else:
+        dataset = load_dataset(
+            config.dataset.name,
+            cache_dir=config.dataset.cache_dir
+        )
     
     split_data = dataset[config.dataset.split]
     print(f"Loaded {len(split_data)} samples from {config.dataset.split} split")
