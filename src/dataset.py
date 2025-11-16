@@ -8,6 +8,83 @@ from datasets import load_dataset
 from transformers import PreTrainedTokenizer
 from omegaconf import DictConfig
 
+class MATH_500Dataset(Dataset):
+    """Custom Dataset class for MATH-500."""
+    
+    def __init__(self, data, tokenizer: PreTrainedTokenizer, max_length: int):
+        """
+        Initialize MATH-500 dataset.
+        
+        Args:
+            data: HuggingFace dataset
+            tokenizer: Tokenizer instance
+            max_length: Maximum sequence length
+        """
+        self.data = data
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        sample = self.data[idx]
+        
+        encoding = self.tokenizer(
+            sample['problem'],
+            max_length=self.max_length,
+            truncation=True,
+            padding="max_length",
+            return_tensors="pt"
+        )
+        
+        return {
+            'input_ids': encoding['input_ids'].squeeze(0),
+            'attention_mask': encoding['attention_mask'].squeeze(0),
+            'idx': idx,
+            'target': sample['answer']
+        }
+
+
+class MATH_500wPromptDataset(Dataset):
+    """Custom Dataset class for MATH-500."""
+    
+    def __init__(self, data, tokenizer: PreTrainedTokenizer, max_length: int):
+        """
+        Initialize MATH-500 dataset.
+        
+        Args:
+            data: HuggingFace dataset
+            tokenizer: Tokenizer instance
+            max_length: Maximum sequence length
+        """
+        self.data = data
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+    
+    def __len__(self):
+        return len(self.data)
+    
+    def __getitem__(self, idx):
+        sample = self.data[idx]
+        text = f"Solve the following mathematical problem. Output the final answer in the end of your solution.\n\nProblem: {sample['problem']}\n\nSolution:"
+        
+        encoding = self.tokenizer(
+            text,
+            max_length=self.max_length,
+            truncation=True,
+            padding="max_length",
+            return_tensors="pt"
+        )
+        
+        return {
+            'input_ids': encoding['input_ids'].squeeze(0),
+            'attention_mask': encoding['attention_mask'].squeeze(0),
+            'idx': idx,
+            'target': sample['answer']
+        }
+
+
 class MRPCDataset(Dataset):
     """Custom Dataset class for MRPC."""
     
