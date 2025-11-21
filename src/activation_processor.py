@@ -9,7 +9,7 @@ from tqdm import tqdm
 from omegaconf import DictConfig, ListConfig
 import logging
 
-from dataset import MRPCDataset, download_dataset, SSTDataset, QQPDataset, Enwik8LlamaDataset, WritingPromptsDataset
+from dataset import MRPCDataset, download_dataset, SSTDataset, QQPDataset, Enwik8LlamaDataset, WritingPromptsDataset, MATH_500Dataset, MATH_500wPromptDataset
 from model import load_model_and_tokenizer, get_model_info, get_model_layers
 from hooks import ActivationHookManager
 from utils import create_output_structure, aggregate_activations, get_storage_stats
@@ -55,7 +55,8 @@ class ActivationProcessor:
             'sst2':SSTDataset,
             'qqp':QQPDataset,
             'enwik8': Enwik8LlamaDataset,
-            'euclaise/writingprompts': WritingPromptsDataset
+            'euclaise/writingprompts': WritingPromptsDataset,
+            'HuggingFaceH4/MATH-500': MATH_500wPromptDataset if self.config.dataset.prompt else MATH_500Dataset,
         }
         key = self.config.dataset['subset'] if 'subset' in self.config.dataset else self.config.dataset.name
         dataset = dataset_class_mapping[key](
