@@ -60,7 +60,14 @@ def parse_anisotropy_svd(X,
     else:
         X_centered = X
     
-    _, singular_values, _ = svd(X_centered, full_matrices=False)
+    X_centered = np.nan_to_num(X_centered, nan=0.0)
+    try:
+        _, singular_values, _ = svd(X_centered, full_matrices=False)
+    except:
+        from scipy.sparse.linalg import svds
+        k = min(X_centered.shape) - 1
+        U, singular_values, Vt = svds(X_centered, k=k)
+        
     
     sigma_squared = singular_values ** 2
     anisotropy = sigma_squared[0] / np.sum(sigma_squared)
@@ -75,7 +82,15 @@ def parse_twonn_dimention(X):
 def parse_singular_dimention(X,
                              variance_threshold=0.90):
     X = X.astype(np.float64)
-    _, S, _ = np.linalg.svd(X, full_matrices=False)
+    X_centered = X
+    X_centered = np.nan_to_num(X_centered, nan=0.0)
+    try:
+        _, singular_values, _ = svd(X_centered, full_matrices=False)
+    except:
+        from scipy.sparse.linalg import svds
+        k = min(X_centered.shape) - 1
+        U, singular_values, Vt = svds(X_centered, k=k)
+    S = singular_values
     variance = S ** 2
     total_variance = np.sum(variance)
     cumulative_variance = np.cumsum(variance) / total_variance
@@ -103,6 +118,10 @@ def calculate_and_save_stats(
         num_samples : int = None,
         num_estimates : int = None
 ):
+    os.makedirs(os.path.dirname(path_to_save), exist_ok=True)
+    with open(path_to_save, 'w') as f:
+        yaml.dump(f'prepare for dump stats {path_to_activations}', f)
+
     stats = defaultdict(list)
     for i in tqdm(range(len(os.listdir(path_to_activations)))):
         stats['twoNN_dim'].append(
@@ -132,6 +151,7 @@ def calculate_and_save_stats(
                                   num_estimates = num_estimates,
                                   variance_threshold=0.99)
             )
+    os.makedirs(os.path.dirname(path_to_save), exist_ok=True)
     with open(path_to_save, 'w') as f:
         yaml.dump(dict(stats), f)
 
