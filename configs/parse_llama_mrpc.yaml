@@ -1,0 +1,4 @@
+path_to_activations: activation_saved/activations_mrpc/open_llama_3b
+path_to_save: all_stats/open_llama_3b_mrpc.yaml
+num_samples: 4096
+num_estimates: 16
