@@ -9,7 +9,6 @@ from datasets import load_dataset
 from transformers import PreTrainedTokenizer
 from omegaconf import DictConfig
 
-
 class MATH_500Dataset(Dataset):
     """Custom Dataset class for MATH-500."""
 
