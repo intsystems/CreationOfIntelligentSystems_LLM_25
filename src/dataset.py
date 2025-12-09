@@ -106,7 +106,10 @@ class MRPCDataset(Dataset):
     
     def __getitem__(self, idx):
         sample = self.data[idx]
-        text = f"Are these 2 sentences equivalent: {sample['sentence1']} and {sample['sentence2']}"
+        text = f"""Determine if the following two sentences are semantically equivalent.
+Sentence 1: {sample['sentence1']}
+Sentence 2: {sample['sentence2']}
+Answer (only "yes" or "no"): """
         
         encoding = self.tokenizer(
             text,
